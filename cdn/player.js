@@ -10,7 +10,6 @@ import { injectLocalError } from './src/js/error.js';
 			return Promise.reject(new Error("lottie-web is not loaded"));
 		}
 
-		// Points directly to your static folder index layout configuration
 		const jsonUrl = options?.jsonUrl ?? "lottie/clockwork/index.json";
 
 		return fetch(jsonUrl)
@@ -35,24 +34,32 @@ import { injectLocalError } from './src/js/error.js';
 			});
 	};
 
-	// --- AUTOMATION LAYER ---
+	// --- ANTI-TAMPER SECURITY LAYER ---
+	// Enforce framing rules inside the runtime loop
+	const isFramed = window.self !== window.top;
+	
+	// Optional: Enforce that parent domain matches your exact product ecosystem
+	// Add this if you want to restrict which websites are allowed to iframe you
+	// const trustedParent = window.parent.location.ancestorOrigins?.contains("https://yourpluginwebsite.com");
+
+	if (!isFramed) {
+		// Kill execution if someone opens player.js or cdn/index.html in a standalone tab
+		injectLocalError("403 Forbidden", "Access Configuration Refused: Invalid Request Origin Token.");
+		return;
+	}
+
 	const urlParams = new URLSearchParams(window.location.search);
 	const effectKey = urlParams.get('effect'); 
 	
-	// If someone strips the query string or leaves it empty, block them instantly
 	if (!effectKey) {
 		injectLocalError("404 Not Found", "The requested URL was not found on this server.");
 	} else {
 		const cleanKey = effectKey.toLowerCase();
-
-		// Construct the path dynamically to match your precise /cdn/lottie/name/index.json vault structure
 		const targetJsonPath = `lottie/${cleanKey}/index.json`;
 
-		// Verify the file exists by calling your engine loop
 		global.roprimePlayClockworkLottie(document.getElementById("container"), {
 			jsonUrl: targetJsonPath
 		}).catch((err) => {
-			// If a user types a fake effect name that doesn't exist, throw your clean 404 page
 			injectLocalError("404 Not Found", "The requested URL was not found on this server.");
 		});
 	}

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>404 Not Found</title>
+    <script type="module">
+        // Points safely down into your cdn folder layout
+        import { injectLocalError } from './cdn/src/js/error.js';
+        
+        // Render the exact same unified custom styling error interface
+        injectLocalError('404 Not Found', 'The requested URL was not found on this server.');
+    </script>
+</head>
+<body style="background: #181d24;">
+</body>
+</html>
