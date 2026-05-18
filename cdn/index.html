@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+			<script type="module">
+		// FIX THE PATH: Ensure this looks exactly inside your cdn/src/js/ directory
+		import { injectLocalError } from './src/js/error.js';
+		
+		// Guard against direct browser tab access
+		if (window.self === window.top) {
+			injectLocalError('403 Forbidden', 'Access Configuration Refused: Invalid Request Origin Token.'); 
+		}
+		</script>
+		<title>Profile effect preview</title>
+		<style>
+			html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; user-select: none; }
+			#container { width: 100%; height: 100%; position: relative; overflow: hidden; background: #181d24; user-select: none; }
+			#container svg { width: 100% !important; height: 100% !important; }
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<script src="../node_modules/lottie-web/build/player/lottie.min.js"></script>
+		<script type="module" src="player.js"></script>
+	</body>
+</html>
