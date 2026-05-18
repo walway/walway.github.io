@@ -1,67 +1,104 @@
 // cdn/player.js
 import { injectLocalError } from './src/js/error.js';
+import {
+	getAnimationEntry,
+	getReplayDelayMs,
+	stripLottieBackground,
+	shouldLoop,
+} from './src/js/animations.js';
 
 (function (global) {
-	global.roprimePlayClockworkLottie = function roprimePlayClockworkLottie(container, options) {
+	let profileReplayTimer = null;
+
+	function clearProfileReplayTimer() {
+		if (profileReplayTimer !== null) {
+			clearTimeout(profileReplayTimer);
+			profileReplayTimer = null;
+		}
+	}
+
+	function scheduleProfileReplay(container, anim, delayMs) {
+		clearProfileReplayTimer();
+		container.style.display = 'none';
+		profileReplayTimer = setTimeout(() => {
+			profileReplayTimer = null;
+			container.style.display = '';
+			anim.goToAndPlay(0, true);
+		}, delayMs);
+	}
+
+	function attachProfilePlayback(container, anim, replayDelayMs) {
+		anim.addEventListener('complete', () => {
+			scheduleProfileReplay(container, anim, replayDelayMs);
+		});
+	}
+
+	global.roprimePlayLottie = function roprimePlayLottie(container, entry) {
 		if (!(container instanceof HTMLElement)) {
-			return Promise.reject(new Error("Missing animation container"));
+			return Promise.reject(new Error('Missing animation container'));
 		}
 		if (!global.lottie?.loadAnimation) {
-			return Promise.reject(new Error("lottie-web is not loaded"));
+			return Promise.reject(new Error('lottie-web is not loaded'));
 		}
 
-		const jsonUrl = options?.jsonUrl ?? "lottie/clockwork/index.json";
+		const loop = shouldLoop(entry);
+		const replayDelayMs = getReplayDelayMs(entry);
 
-		return fetch(jsonUrl)
+		return fetch(entry.file)
 			.then((response) => {
 				if (!response.ok) {
 					throw new Error(`Animation failed to fetch (${response.status})`);
 				}
 				return response.json();
 			})
+			.then((rawData) => stripLottieBackground(rawData))
 			.then((animationData) => {
-				return global.lottie.loadAnimation({
+				const anim = global.lottie.loadAnimation({
 					container,
-					renderer: "svg",
-					loop: true,
+					renderer: 'svg',
+					loop,
 					autoplay: true,
 					animationData,
 					rendererSettings: {
-						preserveAspectRatio: "xMidYMid meet",
+						preserveAspectRatio: 'xMidYMid meet',
 						progressiveLoad: true,
+						clearCanvas: true,
 					},
 				});
+
+				const svg = container.querySelector('svg');
+				if (svg) {
+					svg.style.background = 'transparent';
+				}
+
+				if (!loop) {
+					attachProfilePlayback(container, anim, replayDelayMs);
+				}
+
+				return anim;
 			});
 	};
 
-	// --- ANTI-TAMPER SECURITY LAYER ---
-	// Enforce framing rules inside the runtime loop
 	const isFramed = window.self !== window.top;
-	
-	// Optional: Enforce that parent domain matches your exact product ecosystem
-	// Add this if you want to restrict which websites are allowed to iframe you
-	// const trustedParent = window.parent.location.ancestorOrigins?.contains("https://yourpluginwebsite.com");
 
 	if (!isFramed) {
-		// Kill execution if someone opens player.js or cdn/index.html in a standalone tab
-		injectLocalError("403 Forbidden", "Access Configuration Refused: Invalid Request Origin Token.");
+		injectLocalError(
+			'403 Forbidden',
+			'Access Configuration Refused: Invalid Request Origin Token.',
+		);
 		return;
 	}
 
-	const urlParams = new URLSearchParams(window.location.search);
-	const effectKey = urlParams.get('effect'); 
-	
-	if (!effectKey) {
-		injectLocalError("404 Not Found", "The requested URL was not found on this server.");
-	} else {
-		const cleanKey = effectKey.toLowerCase();
-		const targetJsonPath = `lottie/${cleanKey}/index.json`;
+	const effectKey = new URLSearchParams(window.location.search).get('effect');
+	const entry = getAnimationEntry(effectKey);
 
-		global.roprimePlayClockworkLottie(document.getElementById("container"), {
-			jsonUrl: targetJsonPath
-		}).catch((err) => {
-			injectLocalError("404 Not Found", "The requested URL was not found on this server.");
-		});
+	if (!entry) {
+		injectLocalError('404 Not Found', 'The requested URL was not found on this server.');
+		return;
 	}
 
-})(typeof window !== "undefined" ? window : globalThis);
+	const container = document.getElementById('container');
+	global.roprimePlayLottie(container, entry).catch(() => {
+		injectLocalError('404 Not Found', 'The requested URL was not found on this server.');
+	});
+})(typeof window !== 'undefined' ? window : globalThis);
