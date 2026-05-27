@@ -1,19 +1,10 @@
-// cdn/src/js/animations.js
-//
-// RoPrime plugin effect categories (iframe CDN):
-//   profile — overlays on the Discord user profile card
-//   picture — overlays on the avatar / picture area
-//
-// Parent iframe should allow transparency, e.g.:
-//   <iframe src="...?effect=clockwork" allowtransparency="true" style="background: transparent;"></iframe>
-
 /** @typedef {'profile' | 'picture'} EffectCategory */
 
 /** @typedef {Object} AnimationEntry
- * @property {string} file — path to .lottie (under cdn/)
+ * @property {string} file (path)
  * @property {EffectCategory} category
- * @property {boolean} [loop] — defaults by category (profile: false, picture: true)
- * @property {number} [replayDelayMs] — profile only: idle time before replay (default 5000)
+ * @property {boolean} [loop] (false or true by default)
+ * @property {number} [replayDelayMs] (idle time)
  */
 
 export const EffectCategory = {
@@ -79,7 +70,6 @@ export function getReplayDelayMs(entry) {
 }
 
 /**
- * Remove Lottie background color / layers so the iframe can composite transparently.
  * @param {object} animationData
  * @returns {object}
  */

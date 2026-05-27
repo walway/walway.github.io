@@ -1,9 +1,6 @@
-// cdn/src/js/error.js
-
 export function injectLocalError(title, msg) {
-	window.stop(); // Stop any further resource processing
+	window.stop();
 	
-	// Generate a genuine-looking, cryptographically secure Cloudflare-style Ray ID
 	const cryptoArray = new Uint32Array(2);
 	window.crypto.getRandomValues(cryptoArray);
 	const rayId = Array.from(cryptoArray, num => num.toString(16).padStart(8, '0')).join('').substring(0, 16);
@@ -15,7 +12,6 @@ export function injectLocalError(title, msg) {
 			<meta charset="utf-8">
 			<title>403 Forbidden</title>
 			<style>
-				/* Cloudflare-inspired Minimalist Global Reset */
 				html, body {
 					margin: 0;
 					padding: 0;
@@ -25,7 +21,6 @@ export function injectLocalError(title, msg) {
 					line-height: 1.5;
 				}
 				
-				/* Auto-adapts seamlessly to Dark Mode just like modern edge-servers */
 				@media (prefers-color-scheme: dark) {
 					html, body {
 						background-color: #111111;
@@ -64,7 +59,6 @@ export function injectLocalError(title, msg) {
 					margin: 0 0 30px 0;
 				}
 
-				/* Cloudflare-style subtle metadata layout divider */
 				.cf-error-details {
 					border-top: 1px solid #e0e0e0;
 					padding-top: 20px;
@@ -87,13 +81,11 @@ export function injectLocalError(title, msg) {
 		</head>
 		<body>
 			<div class="cf-wrapper">
-				<!-- Main Error Hierarchy Block -->
 				<h1>403 Access Forbidden</h1>
 				<div class="cf-error-type">Error Code: Web_Access_Block</div>
 				
 				<p>${msg}</p>
 
-				<!-- Ultra-Clean Metadata Diagnostic Footer -->
 				<div class="cf-error-details">
 					<div><strong>Ray ID:</strong> <code>${rayId}</code></div>
 					<div><strong>Status:</strong> <code>Forbidden</code></div>

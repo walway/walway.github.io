@@ -4,10 +4,8 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 			<script type="module">
-		// FIX THE PATH: Ensure this looks exactly inside your cdn/src/js/ directory
 		import { injectLocalError } from './src/js/error.js';
 		
-		// Guard against direct browser tab access
 		if (window.self === window.top) {
 			injectLocalError('403 Forbidden', 'Access Configuration Refused: Invalid Request Origin Token.'); 
 		}

@@ -1,11 +1,10 @@
-/* cdn/src/css/error.css */
 :root {
-	--primary-color: #00bcd4; /* Change this hex code to your exact primary brand color */
+	--primary-color: #00bcd4;
 }
 
 body { 
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-	background: #181d24; /* Styled layout dark background color */
+	background: #181d24;
 	color: #fff; 
 	padding: 0;
 	margin: 0; 
@@ -13,7 +12,7 @@ body {
 	height: 100%;
 	display: flex;
 	flex-direction: column;
-	align-items: center;    /* Center all items horizontally */
+	align-items: center;
 	justify-content: flex-start; /* Place items at the top of the screen */
 	box-sizing: border-box;
 }
@@ -33,7 +32,7 @@ body {
 }
 
 .brand-logo {
-	width: 120px; /* Logo display width */
+	width: 120px;
 	height: auto;
 	fill: var(--primary-color);
 }
@@ -42,7 +41,7 @@ h1 {
 	font-size: 28px; 
 	font-weight: 500; 
 	margin: 0 0 12px 0; 
-	color: var(--primary-color); /* Title text matches your primary color */
+	color: var(--primary-color);
 	border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
 	padding-bottom: 16px; 
 }

@@ -1,4 +1,3 @@
-// cdn/player.js
 import { injectLocalError } from './src/js/error.js';
 import {
 	getAnimationEntry,
