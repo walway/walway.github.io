@@ -3,11 +3,11 @@ import { injectLocalError } from './src/js/error.js';
 import {
 	getAnimationEntry,
 	getReplayDelayMs,
-	stripLottieBackground,
 	shouldLoop,
 } from './src/js/animations.js';
+import { DotLottie } from 'https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-web/+esm';
 
-(function (global) {
+((global) => {
 	let profileReplayTimer = null;
 
 	function clearProfileReplayTimer() {
@@ -23,7 +23,8 @@ import {
 		profileReplayTimer = setTimeout(() => {
 			profileReplayTimer = null;
 			container.style.display = '';
-			anim.goToAndPlay(0, true);
+			anim.setFrame(0);
+			anim.play();
 		}, delayMs);
 	}
 
@@ -37,46 +38,38 @@ import {
 		if (!(container instanceof HTMLElement)) {
 			return Promise.reject(new Error('Missing animation container'));
 		}
-		if (!global.lottie?.loadAnimation) {
-			return Promise.reject(new Error('lottie-web is not loaded'));
-		}
 
 		const loop = shouldLoop(entry);
 		const replayDelayMs = getReplayDelayMs(entry);
+		container.innerHTML = '';
 
-		return fetch(entry.file)
-			.then((response) => {
-				if (!response.ok) {
-					throw new Error(`Animation failed to fetch (${response.status})`);
-				}
-				return response.json();
-			})
-			.then((rawData) => stripLottieBackground(rawData))
-			.then((animationData) => {
-				const anim = global.lottie.loadAnimation({
-					container,
-					renderer: 'svg',
-					loop,
-					autoplay: true,
-					animationData,
-					rendererSettings: {
-						preserveAspectRatio: 'xMidYMid meet',
-						progressiveLoad: true,
-						clearCanvas: true,
-					},
-				});
+		const canvas = document.createElement('canvas');
+		canvas.style.width = '100%';
+		canvas.style.height = '100%';
+		canvas.style.display = 'block';
+		container.appendChild(canvas);
 
-				const svg = container.querySelector('svg');
-				if (svg) {
-					svg.style.background = 'transparent';
-				}
+		return fetch(entry.file, { method: 'HEAD' }).then((response) => {
+			if (!response.ok) {
+				throw new Error(`Animation failed to fetch (${response.status})`);
+			}
 
-				if (!loop) {
-					attachProfilePlayback(container, anim, replayDelayMs);
-				}
-
-				return anim;
+			const anim = new DotLottie({
+				canvas,
+				src: entry.file,
+				autoplay: true,
+				loop,
+				renderConfig: {
+					autoResize: true,
+				},
 			});
+
+			if (!loop) {
+				attachProfilePlayback(container, anim, replayDelayMs);
+			}
+
+			return anim;
+		});
 	};
 
 	const isFramed = window.self !== window.top;

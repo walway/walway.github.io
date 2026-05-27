@@ -10,7 +10,7 @@
 /** @typedef {'profile' | 'picture'} EffectCategory */
 
 /** @typedef {Object} AnimationEntry
- * @property {string} file — path to lottie JSON (under cdn/)
+ * @property {string} file — path to .lottie (under cdn/)
  * @property {EffectCategory} category
  * @property {boolean} [loop] — defaults by category (profile: false, picture: true)
  * @property {number} [replayDelayMs] — profile only: idle time before replay (default 5000)
@@ -23,14 +23,14 @@ export const EffectCategory = {
 
 export const PROFILE_REPLAY_DELAY_MS = 5000;
 
+const EFFECT_KEY_REGEX = /^[a-z0-9_-]+$/i;
+
 /** @type {Record<string, AnimationEntry>} */
-export const animationRegistry = {
+export const animationOverrides = {
 	clockwork: {
-		file: 'lottie/clockwork/index.json',
 		category: EffectCategory.PROFILE,
 	},
 	dizzy: {
-		file: 'lottie/dizzy/dizzy.json',
 		category: EffectCategory.PICTURE,
 	},
 };
@@ -41,7 +41,16 @@ export const animationRegistry = {
  */
 export function getAnimationEntry(key) {
 	if (!key) return null;
-	return animationRegistry[key.toLowerCase()] ?? null;
+	const normalized = key.trim().toLowerCase();
+	if (!normalized || !EFFECT_KEY_REGEX.test(normalized)) return null;
+
+	const override = animationOverrides[normalized] ?? {};
+	return {
+		file: `lottie/${normalized}/index.lottie`,
+		category: override.category ?? EffectCategory.PICTURE,
+		loop: override.loop,
+		replayDelayMs: override.replayDelayMs,
+	};
 }
 
 /**
@@ -75,16 +84,5 @@ export function getReplayDelayMs(entry) {
  * @returns {object}
  */
 export function stripLottieBackground(animationData) {
-	const data = structuredClone(animationData);
-	delete data.bg;
-
-	if (Array.isArray(data.layers)) {
-		data.layers = data.layers.filter((layer) => {
-			if (layer.ty !== 1) return true;
-			const name = (layer.nm || '').toLowerCase();
-			return !name.includes('background') && name !== 'bg';
-		});
-	}
-
-	return data;
+	return animationData;
 }
