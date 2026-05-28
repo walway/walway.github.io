@@ -8,6 +8,26 @@ import { DotLottie } from 'https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-w
 
 ((global) => {
 	let profileReplayTimer = null;
+	const TARGET_SETTINGS = 'settings';
+	const TARGET_PROFILE = 'profile';
+	const SOURCE_IFRAME = 'iframe';
+
+	function getQueryParams() {
+		const currentUrl = window.location.href;
+		const parsed = new URL(currentUrl);
+		if (parsed.search) {
+			return parsed.searchParams;
+		}
+
+		// Support malformed links like /cdn/index.html&effect=...&target=...
+		const malformedMarkerIndex = currentUrl.indexOf('&');
+		if (malformedMarkerIndex === -1) {
+			return new URLSearchParams();
+		}
+
+		const rawQuery = currentUrl.slice(malformedMarkerIndex + 1);
+		return new URLSearchParams(rawQuery);
+	}
 
 	function clearProfileReplayTimer() {
 		if (profileReplayTimer !== null) {
@@ -81,7 +101,10 @@ import { DotLottie } from 'https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-w
 		return;
 	}
 
-	const effectKey = new URLSearchParams(window.location.search).get('effect');
+	const queryParams = getQueryParams();
+	const effectKey = queryParams.get('effect');
+	const target = queryParams.get('target');
+	const source = queryParams.get('source');
 	const entry = getAnimationEntry(effectKey);
 
 	if (!entry) {
@@ -89,8 +112,24 @@ import { DotLottie } from 'https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-w
 		return;
 	}
 
+	if (source !== SOURCE_IFRAME) {
+		injectLocalError('403 Forbidden', 'Access Configuration Refused: Missing iframe source token.');
+		return;
+	}
+
+	const playbackEntry = {
+		...entry,
+		loop:
+			target === TARGET_SETTINGS
+				? true
+				: target === TARGET_PROFILE
+					? false
+					: entry.loop,
+		replayDelayMs: target === TARGET_PROFILE ? 5000 : entry.replayDelayMs,
+	};
+
 	const container = document.getElementById('container');
-	global.roprimePlayLottie(container, entry).catch(() => {
+	global.roprimePlayLottie(container, playbackEntry).catch(() => {
 		injectLocalError('404 Not Found', 'The requested URL was not found on this server.');
 	});
 })(typeof window !== 'undefined' ? window : globalThis);
