@@ -19,7 +19,6 @@ import { DotLottie } from 'https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-w
 			return parsed.searchParams;
 		}
 
-		// Support malformed links like /cdn/index.html&effect=...&target=...
 		const malformedMarkerIndex = currentUrl.indexOf('&');
 		if (malformedMarkerIndex === -1) {
 			return new URLSearchParams();
