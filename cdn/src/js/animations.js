@@ -1,12 +1,3 @@
-/** @typedef {'profile' | 'picture'} EffectCategory */
-
-/** @typedef {Object} AnimationEntry
- * @property {string} file (path)
- * @property {EffectCategory} category
- * @property {boolean} [loop] (false or true by default)
- * @property {number} [replayDelayMs] (idle time)
- */
-
 export const EffectCategory = {
 	PROFILE: 'profile',
 	PICTURE: 'picture',
@@ -16,7 +7,6 @@ export const PROFILE_REPLAY_DELAY_MS = 5000;
 
 const EFFECT_KEY_REGEX = /^[a-z0-9_-]+$/i;
 
-/** @type {Record<string, AnimationEntry>} */
 export const animationOverrides = {
 	clockwork: {
 		category: EffectCategory.PROFILE,
@@ -26,10 +16,6 @@ export const animationOverrides = {
 	},
 };
 
-/**
- * @param {string | null | undefined} key
- * @returns {AnimationEntry | null}
- */
 export function getAnimationEntry(key) {
 	if (!key) return null;
 	const normalized = key.trim().toLowerCase();
@@ -44,35 +30,22 @@ export function getAnimationEntry(key) {
 	};
 }
 
-/**
- * @param {AnimationEntry} entry
- * @returns {boolean}
- */
 export function isProfileEffect(entry) {
 	return entry.category === EffectCategory.PROFILE;
 }
 
-/**
- * @param {AnimationEntry} entry
- * @returns {boolean}
- */
 export function shouldLoop(entry) {
 	if (typeof entry.loop === 'boolean') return entry.loop;
 	return entry.category === EffectCategory.PICTURE;
 }
 
-/**
- * @param {AnimationEntry} entry
- * @returns {number}
- */
 export function getReplayDelayMs(entry) {
-	return entry.replayDelayMs ?? PROFILE_REPLAY_DELAY_MS;
+	if (typeof entry.replayDelayMs === 'number') {
+		return entry.replayDelayMs;
+	}
+	return isProfileEffect(entry) ? PROFILE_REPLAY_DELAY_MS : 0;
 }
 
-/**
- * @param {object} animationData
- * @returns {object}
- */
 export function stripLottieBackground(animationData) {
 	return animationData;
 }
