@@ -10,6 +10,7 @@ import { DotLottie } from 'https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-w
 	let profileReplayTimer = null;
 	const TARGET_SETTINGS = 'settings';
 	const TARGET_PROFILE = 'profile';
+	const TARGET_PICTURE = 'picture';
 	const SOURCE_IFRAME = 'iframe';
 
 	function getQueryParams() {
@@ -121,7 +122,7 @@ import { DotLottie } from 'https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-w
 		loop:
 			target === TARGET_SETTINGS
 				? true
-				: target === TARGET_PROFILE
+				: target === TARGET_PROFILE || target === TARGET_PICTURE
 					? false
 					: entry.loop,
 		replayDelayMs: target === TARGET_PROFILE ? 5000 : entry.replayDelayMs,
