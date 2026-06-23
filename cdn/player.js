@@ -120,9 +120,9 @@ import { DotLottie } from 'https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-w
 	const playbackEntry = {
 		...entry,
 		loop:
-			target === TARGET_SETTINGS
+			target === TARGET_SETTINGS || target === TARGET_PICTURE
 				? true
-				: target === TARGET_PROFILE || target === TARGET_PICTURE
+				: target === TARGET_PROFILE
 					? false
 					: entry.loop,
 		replayDelayMs: target === TARGET_PROFILE ? 5000 : entry.replayDelayMs,
