@@ -14,10 +14,10 @@
     "malicious": "false"
   },
   {
-    "key": "robloxqol",
+    "key": "roqol",
     "title": "RoQol",
-    "search": ["roqol", "robloxqol", "roblox qol"],
-    "settingsPath": "?tab=robloxqol&option=General",
+    "search": ["roqol"],
+    "settingsPath": "?tab=roqol&option=General",
     "malicious": "false"
   },
   {
