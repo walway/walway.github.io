@@ -18,7 +18,7 @@
     "title": "RoQol",
     "search": ["roqol"],
     "settingsPath": "?tab=roqol&option=General",
-    "malicious": "true"
+    "malicious": "false"
   },
   {
     "key": "roprime",
