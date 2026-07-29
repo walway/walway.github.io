@@ -105,7 +105,6 @@ import {
 		const resizeCanvas = () => {
 			const dpr = window.devicePixelRatio || 1;
 			
-			// Dynamically read 100% of the viewport container area on your screen
 			const measuredWidth = window.innerWidth || document.documentElement.clientWidth;
 			const measuredHeight = window.innerHeight || document.documentElement.clientHeight;
 
