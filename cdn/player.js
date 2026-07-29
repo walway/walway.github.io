@@ -61,14 +61,14 @@ import {
 		}
 	}
 
-	function scheduleProfileReplay(container, runner, delayMs) {
+	function scheduleProfileReplay(canvasElement, runner, delayMs) {
 		clearProfileReplayTimer();
-		container.style.display = 'none';
+		canvasElement.style.display = 'none';
 		if (runner) runner.pause();
 		
 		profileReplayTimer = setTimeout(() => {
 			profileReplayTimer = null;
-			container.style.display = '';
+			canvasElement.style.display = 'block';
 			if (runner) runner.restart();
 		}, delayMs);
 	}
@@ -83,9 +83,9 @@ import {
 		return wasmInstance;
 	}
 
-	global.roprimePlayLottie = function roprimePlayLottie(container, entry) {
-		if (!(container instanceof HTMLElement)) {
-			return Promise.reject(new Error('Missing animation container'));
+	global.roprimePlayLottie = function roprimePlayLottie(canvasElement, entry) {
+		if (!(canvasElement instanceof HTMLCanvasElement)) {
+			return Promise.reject(new Error('Target must be a canvas element'));
 		}
 
 		if (currentLottieRunner) {
@@ -95,29 +95,15 @@ import {
 
 		const loop = shouldLoop(entry);
 		const replayDelayMs = getReplayDelayMs(entry);
-		container.innerHTML = '';
-
-		const canvas = document.createElement('canvas');
-		canvas.style.width = '100%';
-		canvas.style.height = '100%';
-		canvas.style.display = 'block';
-		container.appendChild(canvas);
-		const ctx = canvas.getContext('2d');
+		const ctx = canvasElement.getContext('2d');
 
 		ctx.imageSmoothingEnabled = false;
 
-		let renderWidth = 0;
-		let renderHeight = 0;
-
-		const resizeCanvas = () => {
-			const dpr = window.devicePixelRatio || 1;
-			renderWidth = Math.round(container.clientWidth * dpr);
-			renderHeight = Math.round(container.clientHeight * dpr);
-			canvas.width = renderWidth;
-			canvas.height = renderHeight;
-		};
-		window.addEventListener('resize', resizeCanvas);
-		resizeCanvas();
+		// Force the internal render resolution to exactly 1000x1000 pixels
+		const renderWidth = 1000;
+		const renderHeight = 1000;
+		canvasElement.width = renderWidth;
+		canvasElement.height = renderHeight;
 
 		const jsonFileUrl = `./${entry.file.replace('.lottie', '.json')}`;
 
@@ -158,17 +144,15 @@ import {
 					if (loop) {
 						currentFrame = 0;
 					} else {
-						scheduleProfileReplay(container, runnerHandle, replayDelayMs);
+						scheduleProfileReplay(canvasElement, runnerHandle, replayDelayMs);
 						return;
 					}
 				}
 
-				if (renderWidth > 0 && renderHeight > 0) {
-					const pixelPointer = wasm.tlottie_render(player, currentFrame, renderWidth, renderHeight);
-					const pixelBuffer = new Uint8ClampedArray(wasm.memory.buffer, pixelPointer, renderWidth * renderHeight * 4);
-					const imageData = new ImageData(pixelBuffer, renderWidth, renderHeight);
-					ctx.putImageData(imageData, 0, 0);
-				}
+				const pixelPointer = wasm.tlottie_render(player, currentFrame, renderWidth, renderHeight);
+				const pixelBuffer = new Uint8ClampedArray(wasm.memory.buffer, pixelPointer, renderWidth * renderHeight * 4);
+				const imageData = new ImageData(pixelBuffer, renderWidth, renderHeight);
+				ctx.putImageData(imageData, 0, 0);
 
 				currentFrame++;
 			}
@@ -197,7 +181,6 @@ import {
 				destroy: () => {
 					isPaused = true;
 					if (animationFrameId) cancelAnimationFrame(animationFrameId);
-					window.removeEventListener('resize', resizeCanvas);
 					if (wasm.tlottie_drop) wasm.tlottie_drop(player);
 					if (wasm.tlottie_free) wasm.tlottie_free(jsonPointer, jsonLength);
 				}
@@ -245,8 +228,8 @@ import {
 		replayDelayMs: target === TARGET_PROFILE ? 5000 : entry.replayDelayMs,
 	};
 
-	const container = document.getElementById('container');
-	global.roprimePlayLottie(container, playbackEntry).catch((err) => {
+	const canvasElement = document.getElementById('lottieCanvas');
+	global.roprimePlayLottie(canvasElement, playbackEntry).catch((err) => {
 		console.error(err);
 		injectLocalError('404 Not Found', 'The requested URL was not found on this server.');
 	});

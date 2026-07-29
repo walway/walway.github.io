@@ -1,43 +1,37 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-			<script type="module">
-		import { injectLocalError } from './src/js/error.js';
-		
-		if (window.self === window.top) {
-			injectLocalError('403 Forbidden', 'Access Configuration Refused: Invalid Request Origin Token.'); 
-		}
-		</script>
-		<title>Profile effect preview</title>
-		<style>
-			html, body {
-				margin: 0;
-				padding: 0;
-				width: 100%;
-				height: 100%;
-				overflow: hidden;
-				background: transparent;
-				user-select: none;
-			}
-			#container {
-				width: 100%;
-				height: 100%;
-				position: relative;
-				overflow: hidden;
-				background: transparent;
-				user-select: none;
-			}
-			#container svg {
-				width: 100% !important;
-				height: 100% !important;
-				background: transparent;
-			}
-		</style>
-	</head>
-	<body>
-		<div id="container"></div>
-		<script type="module" src="player.js"></script>
-	</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script type="module">
+      import { injectLocalError } from './src/js/error.js';
+      
+      if (window.self === window.top) {
+        injectLocalError('403 Forbidden', 'Access Configuration Refused: Invalid Request Origin Token.'); 
+      }
+    </script>
+    <title>Profile effect preview</title>
+    <style>
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        background: transparent !important;
+      }
+      canvas {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        display: block !important;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="lottieCanvas"></canvas>
+    <script type="module" src="player.js"></script>
+  </body>
 </html>
