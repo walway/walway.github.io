@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@lottiefiles/dotlottie-web": "^0.72.1",
+    "fflate": "^0.8.3",
     "lottie-web": "^5.13.0"
   }
 }

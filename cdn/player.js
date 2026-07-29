@@ -4,11 +4,11 @@ import {
 	getReplayDelayMs,
 	shouldLoop,
 } from './src/js/animations.js';
-import * as fflate from 'https://jsdelivr.net';
 
 ((global) => {
 	let profileReplayTimer = null;
 	let wasmInstance = null;
+	let currentLottieRunner = null;
 	const TARGET_SETTINGS = 'settings';
 	const TARGET_PROFILE = 'profile';
 	const TARGET_PICTURE = 'picture';
@@ -17,17 +17,41 @@ import * as fflate from 'https://jsdelivr.net';
 	function getQueryParams() {
 		const currentUrl = window.location.href;
 		const parsed = new URL(currentUrl);
-		if (parsed.search) {
-			return parsed.searchParams;
+		
+		const searchParams = new URLSearchParams(parsed.search);
+		if (searchParams.has('effect')) {
+			return searchParams;
 		}
 
-		const malformedMarkerIndex = currentUrl.indexOf('&');
-		if (malformedMarkerIndex === -1) {
+		const questionMarkIndex = currentUrl.indexOf('?');
+		if (questionMarkIndex === -1) {
 			return new URLSearchParams();
 		}
 
-		const rawQuery = currentUrl.slice(malformedMarkerIndex + 1);
-		return new URLSearchParams(rawQuery);
+		const rawQuery = currentUrl.slice(questionMarkIndex + 1);
+		const params = new URLSearchParams();
+
+		if (/^[a-zA-Z0-9_-]+$/.test(rawQuery)) {
+			params.set('effect', rawQuery);
+			params.set('target', TARGET_PICTURE);
+			params.set('source', SOURCE_IFRAME);
+			return params;
+		}
+
+		const pairs = rawQuery.split('&');
+		pairs.forEach(pair => {
+			const [key, value] = pair.split('=');
+			if (key && value) {
+				params.set(key, decodeURIComponent(value));
+			} else if (key && !value) {
+				params.set('effect', key);
+			}
+		});
+
+		if (!params.has('source')) params.set('source', SOURCE_IFRAME);
+		if (!params.has('target')) params.set('target', TARGET_PICTURE);
+
+		return params;
 	}
 
 	function clearProfileReplayTimer() {
@@ -37,83 +61,36 @@ import * as fflate from 'https://jsdelivr.net';
 		}
 	}
 
-	function scheduleProfileReplay(container, renderState, delayMs) {
+	function scheduleProfileReplay(container, runner, delayMs) {
 		clearProfileReplayTimer();
 		container.style.display = 'none';
-		renderState.active = false;
+		if (runner) runner.pause();
 		
 		profileReplayTimer = setTimeout(() => {
 			profileReplayTimer = null;
 			container.style.display = '';
-			renderState.currentFrame = 0;
-			renderState.active = true;
-			renderWasmFrame(renderState);
+			if (runner) runner.restart();
 		}, delayMs);
 	}
 
 	async function loadWasmEngine() {
 		if (wasmInstance) return wasmInstance;
 		const response = await fetch('./src/wasm/tlottie.wasm');
-		if (!response.ok) throw new Error('Failed to fetch tlottie.wasm');
+		if (!response.ok) throw new Error('WASM load failed');
 		const buffer = await response.arrayBuffer();
 		const { instance } = await WebAssembly.instantiate(buffer, {});
 		wasmInstance = instance.exports;
 		return wasmInstance;
 	}
 
-	async function extractLottieJson(url) {
-		const response = await fetch(url);
-		if (!response.ok) throw new Error(`Animation fetch failed (${response.status})`);
-		const arrayBuffer = await response.arrayBuffer();
-		const zipData = new Uint8Array(arrayBuffer);
-		const unzipped = fflate.unzipSync(zipData);
-		
-		let animationFilename = 'animations/data.json'; 
-		if (unzipped['manifest.json']) {
-			const manifestText = new TextDecoder().decode(unzipped['manifest.json']);
-			const manifest = JSON.parse(manifestText);
-			if (manifest.animations && manifest.animations) {
-				animationFilename = `animations/${manifest.animations.id}.json`;
-			}
-		}
-
-		const animBuffer = unzipped[animationFilename] || unzipped[Object.keys(unzipped).find(k => k.endsWith('.json'))];
-		if (!animBuffer) throw new Error('No animation JSON asset found inside .lottie file');
-		
-		return new TextDecoder().decode(animBuffer);
-	}
-
-	function renderWasmFrame(state) {
-		if (!state.active) return;
-
-		const { wasm, player, totalFrames, loop, replayDelayMs, container, canvas, ctx } = state;
-		
-		if (state.currentFrame >= totalFrames) {
-			if (loop) {
-				state.currentFrame = 0;
-			} else {
-				scheduleProfileReplay(container, state, replayDelayMs);
-				return;
-			}
-		}
-
-		const w = canvas.width;
-		const h = canvas.height;
-
-		if (w > 0 && h > 0) {
-			const pixelPointer = wasm.render_frame(player, state.currentFrame, w, h);
-			const pixelBuffer = new Uint8ClampedArray(wasm.memory.buffer, pixelPointer, w * h * 4);
-			const imageData = new ImageData(pixelBuffer, w, h);
-			ctx.putImageData(imageData, 0, 0);
-		}
-
-		state.currentFrame++;
-		state.animationFrameId = requestAnimationFrame(() => renderWasmFrame(state));
-	}
-
 	global.roprimePlayLottie = function roprimePlayLottie(container, entry) {
 		if (!(container instanceof HTMLElement)) {
 			return Promise.reject(new Error('Missing animation container'));
+		}
+
+		if (currentLottieRunner) {
+			currentLottieRunner.destroy();
+			currentLottieRunner = null;
 		}
 
 		const loop = shouldLoop(entry);
@@ -127,49 +104,108 @@ import * as fflate from 'https://jsdelivr.net';
 		container.appendChild(canvas);
 		const ctx = canvas.getContext('2d');
 
+		ctx.imageSmoothingEnabled = false;
+
+		let renderWidth = 0;
+		let renderHeight = 0;
+
 		const resizeCanvas = () => {
-			canvas.width = container.clientWidth * window.devicePixelRatio;
-			canvas.height = container.clientHeight * window.devicePixelRatio;
+			const dpr = window.devicePixelRatio || 1;
+			renderWidth = Math.round(container.clientWidth * dpr);
+			renderHeight = Math.round(container.clientHeight * dpr);
+			canvas.width = renderWidth;
+			canvas.height = renderHeight;
 		};
 		window.addEventListener('resize', resizeCanvas);
 		resizeCanvas();
 
-		return Promise.all([loadWasmEngine(), extractLottieJson(entry.file)])
-			.then(([wasm, jsonText]) => {
-				const player = wasm.create_player(jsonText);
-				const totalFrames = wasm.get_total_frames(player);
+		const jsonFileUrl = `./${entry.file.replace('.lottie', '.json')}`;
 
-				const renderState = {
-					wasm,
-					player,
-					totalFrames,
-					loop,
-					replayDelayMs,
-					container,
-					canvas,
-					ctx,
-					currentFrame: 0,
-					active: true,
-					animationFrameId: null
-				};
+		return Promise.all([loadWasmEngine(), fetch(jsonFileUrl).then(res => {
+			if (!res.ok) throw new Error(`JSON fetch failed (${res.status})`);
+			return res.text();
+		})])
+		.then(([wasm, jsonText]) => {
+			const encoder = new TextEncoder();
+			const jsonBytes = encoder.encode(jsonText);
+			const jsonLength = jsonBytes.length;
 
-				renderWasmFrame(renderState);
+			const jsonPointer = wasm.tlottie_alloc(jsonLength);
+			const wasmMemoryBuffer = new Uint8Array(wasm.memory.buffer);
+			wasmMemoryBuffer.set(jsonBytes, jsonPointer);
 
-				return {
-					setFrame: (frame) => { renderState.currentFrame = frame; },
-					play: () => { 
-						if (!renderState.active) {
-							renderState.active = true; 
-							renderWasmFrame(renderState);
-						}
-					},
-					destroy: () => {
-						renderState.active = false;
-						cancelAnimationFrame(renderState.animationFrameId);
-						window.removeEventListener('resize', resizeCanvas);
+			const player = wasm.tlottie_new(jsonPointer, jsonLength);
+			const totalFrames = wasm.tlottie_frame_count(player);
+			
+			const fps = wasm.tlottie_frame_rate ? wasm.tlottie_frame_rate(player) : 60;
+			const frameIntervalMs = 1000 / fps;
+
+			let currentFrame = 0;
+			let animationFrameId = null;
+			let lastRenderTime = 0;
+			let isPaused = false;
+
+			function render(timestamp) {
+				if (isPaused) return;
+				animationFrameId = requestAnimationFrame(render);
+
+				const elapsed = timestamp - lastRenderTime;
+				if (elapsed < frameIntervalMs) return;
+
+				lastRenderTime = timestamp - (elapsed % frameIntervalMs);
+
+				if (currentFrame >= totalFrames) {
+					if (loop) {
+						currentFrame = 0;
+					} else {
+						scheduleProfileReplay(container, runnerHandle, replayDelayMs);
+						return;
 					}
-				};
-			});
+				}
+
+				if (renderWidth > 0 && renderHeight > 0) {
+					const pixelPointer = wasm.tlottie_render(player, currentFrame, renderWidth, renderHeight);
+					const pixelBuffer = new Uint8ClampedArray(wasm.memory.buffer, pixelPointer, renderWidth * renderHeight * 4);
+					const imageData = new ImageData(pixelBuffer, renderWidth, renderHeight);
+					ctx.putImageData(imageData, 0, 0);
+				}
+
+				currentFrame++;
+			}
+
+			animationFrameId = requestAnimationFrame(render);
+
+			const runnerHandle = {
+				setFrame: (frame) => { currentFrame = frame; },
+				play: () => {
+					if (isPaused) {
+						isPaused = false;
+						lastRenderTime = performance.now();
+						animationFrameId = requestAnimationFrame(render);
+					}
+				},
+				pause: () => {
+					isPaused = true;
+					if (animationFrameId) cancelAnimationFrame(animationFrameId);
+				},
+				restart: () => {
+					isPaused = false;
+					currentFrame = 0;
+					lastRenderTime = performance.now();
+					animationFrameId = requestAnimationFrame(render);
+				},
+				destroy: () => {
+					isPaused = true;
+					if (animationFrameId) cancelAnimationFrame(animationFrameId);
+					window.removeEventListener('resize', resizeCanvas);
+					if (wasm.tlottie_drop) wasm.tlottie_drop(player);
+					if (wasm.tlottie_free) wasm.tlottie_free(jsonPointer, jsonLength);
+				}
+			};
+
+			currentLottieRunner = runnerHandle;
+			return runnerHandle;
+		});
 	};
 
 	const isFramed = window.self !== window.top;
