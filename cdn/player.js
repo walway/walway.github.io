@@ -104,7 +104,6 @@ import {
 
 		const resizeCanvas = () => {
 			const dpr = window.devicePixelRatio || 1;
-			
 			const measuredWidth = window.innerWidth || document.documentElement.clientWidth;
 			const measuredHeight = window.innerHeight || document.documentElement.clientHeight;
 
@@ -160,10 +159,12 @@ import {
 					}
 				}
 
-				const pixelPointer = wasm.tlottie_render(player, currentFrame, renderWidth, renderHeight);
-				const pixelBuffer = new Uint8ClampedArray(wasm.memory.buffer, pixelPointer, renderWidth * renderHeight * 4);
-				const imageData = new ImageData(pixelBuffer, renderWidth, renderHeight);
-				ctx.putImageData(imageData, 0, 0);
+				if (renderWidth > 0 && renderHeight > 0) {
+					const pixelPointer = wasm.tlottie_render(player, currentFrame, renderWidth, renderHeight);
+					const pixelBuffer = new Uint8ClampedArray(wasm.memory.buffer, pixelPointer, renderWidth * renderHeight * 4);
+					const imageData = new ImageData(pixelBuffer, renderWidth, renderHeight);
+					ctx.putImageData(imageData, 0, 0);
+				}
 
 				currentFrame++;
 			}
@@ -192,6 +193,7 @@ import {
 				destroy: () => {
 					isPaused = true;
 					if (animationFrameId) cancelAnimationFrame(animationFrameId);
+					window.removeEventListener('resize', resizeCanvas);
 					if (wasm.tlottie_drop) wasm.tlottie_drop(player);
 					if (wasm.tlottie_free) wasm.tlottie_free(jsonPointer, jsonLength);
 				}
