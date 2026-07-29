@@ -99,11 +99,23 @@ import {
 
 		ctx.imageSmoothingEnabled = false;
 
-		// Force the internal render resolution to exactly 1000x1000 pixels
-		const renderWidth = 1000;
-		const renderHeight = 1000;
-		canvasElement.width = renderWidth;
-		canvasElement.height = renderHeight;
+		let renderWidth = 0;
+		let renderHeight = 0;
+
+		const resizeCanvas = () => {
+			const dpr = window.devicePixelRatio || 1;
+			
+			// Dynamically read 100% of the viewport container area on your screen
+			const measuredWidth = window.innerWidth || document.documentElement.clientWidth;
+			const measuredHeight = window.innerHeight || document.documentElement.clientHeight;
+
+			renderWidth = Math.round(measuredWidth * dpr);
+			renderHeight = Math.round(measuredHeight * dpr);
+			canvasElement.width = renderWidth;
+			canvasElement.height = renderHeight;
+		};
+		window.addEventListener('resize', resizeCanvas);
+		resizeCanvas();
 
 		const jsonFileUrl = `./${entry.file.replace('.lottie', '.json')}`;
 
@@ -149,10 +161,12 @@ import {
 					}
 				}
 
-				const pixelPointer = wasm.tlottie_render(player, currentFrame, renderWidth, renderHeight);
-				const pixelBuffer = new Uint8ClampedArray(wasm.memory.buffer, pixelPointer, renderWidth * renderHeight * 4);
-				const imageData = new ImageData(pixelBuffer, renderWidth, renderHeight);
-				ctx.putImageData(imageData, 0, 0);
+				if (renderWidth > 0 && renderHeight > 0) {
+					const pixelPointer = wasm.tlottie_render(player, currentFrame, renderWidth, renderHeight);
+					const pixelBuffer = new Uint8ClampedArray(wasm.memory.buffer, pixelPointer, renderWidth * renderHeight * 4);
+					const imageData = new ImageData(pixelBuffer, renderWidth, renderHeight);
+					ctx.putImageData(imageData, 0, 0);
+				}
 
 				currentFrame++;
 			}
@@ -181,6 +195,7 @@ import {
 				destroy: () => {
 					isPaused = true;
 					if (animationFrameId) cancelAnimationFrame(animationFrameId);
+					window.removeEventListener('resize', resizeCanvas);
 					if (wasm.tlottie_drop) wasm.tlottie_drop(player);
 					if (wasm.tlottie_free) wasm.tlottie_free(jsonPointer, jsonLength);
 				}
