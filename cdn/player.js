@@ -53,7 +53,7 @@ import * as fflate from 'https://jsdelivr.net';
 
 	async function loadWasmEngine() {
 		if (wasmInstance) return wasmInstance;
-		const response = await fetch('./wasm/tlottie.wasm');
+		const response = await fetch('./src/wasm/tlottie.wasm');
 		if (!response.ok) throw new Error('Failed to fetch tlottie.wasm');
 		const buffer = await response.arrayBuffer();
 		const { instance } = await WebAssembly.instantiate(buffer, {});
@@ -72,8 +72,8 @@ import * as fflate from 'https://jsdelivr.net';
 		if (unzipped['manifest.json']) {
 			const manifestText = new TextDecoder().decode(unzipped['manifest.json']);
 			const manifest = JSON.parse(manifestText);
-			if (manifest.animations && manifest.animations[0]) {
-				animationFilename = `animations/${manifest.animations[0].id}.json`;
+			if (manifest.animations && manifest.animations) {
+				animationFilename = `animations/${manifest.animations.id}.json`;
 			}
 		}
 
